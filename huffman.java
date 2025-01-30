@@ -44,7 +44,7 @@ public class huffman {
         encodeText();
         System.out.println(codedText);
         for (Map.Entry<String, String> entry : charCodes.entrySet()) {
-            System.out.println("Character: " + entry.getKey() + ", Count: " + entry.getValue());
+            System.out.println("Character: " + entry.getKey() + ", code: " + entry.getValue());
         }
 
         decodeText();

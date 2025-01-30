@@ -4,7 +4,7 @@
 
 public class main {
     public static void main(String[] args){
-        huffman code = new huffman("aaaaaabbxxdsa");
+        huffman code = new huffman("i was here before and i will be here foreveer no matter what");
         System.out.println(code.root.getCharecter() + " : " + code.root.getCount());
         
     }

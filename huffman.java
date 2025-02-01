@@ -1,14 +1,18 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.BitSet;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.ObjectInputStream;
 
 public class huffman {
@@ -23,34 +27,48 @@ public class huffman {
         this.path = path;
         this.outputPath = outputPath;
         charCodes = new HashMap<>();
+        String fileFormatInput = path.substring(path.length() - 3);
+        String fileFormatOutput = outputPath.substring(outputPath.length() - 3);
 
-
-
-        encodeFile();
-
-
-
-        for (Map.Entry<String, Integer> entry : charCountMap.entrySet()) {
-
-            System.out.println("Character: " + entry.getKey() + ", occurence: " + entry.getValue());
-            
+        if(fileFormatInput.equals("txt") && fileFormatOutput.equals("hff")){
+            encodeFile();
+            for (Map.Entry<String, Integer> entry : charCountMap.entrySet()) {
+                if(entry.getKey() == "\n"){
+                    System.out.println("Character: new line" + ", occurence: " + entry.getValue());
+                }
+                else{
+                    System.out.println("Character: " + entry.getKey() + ", occurence: " + entry.getValue());
+                }
+                
+            }
+            System.out.println();
+            for (Map.Entry<String, String> entry : charCodes.entrySet()) {
+                if(entry.getKey().equals("\n")){
+                    System.out.println("Character: new line" + ", code: " + entry.getValue());
+                }else{
+                    System.out.println("Character: " + entry.getKey() + ", code: " + entry.getValue());
+                }
+                
+            }
         }
-        System.out.println();
-        for (Map.Entry<String, String> entry : charCodes.entrySet()) {
-            System.out.println("Character: " + entry.getKey() + ", code: " + entry.getValue());
-        }
-
-    }
 
 
-    public huffman(String pathEncodedFile){
-        outputPath = "decoded.txt";
-        try(FileInputStream fileInputStream = new FileInputStream(pathEncodedFile);  ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)){
-            decodeFile(objectInputStream);
+        if(fileFormatInput.equals("hff") && fileFormatOutput.equals("txt")){
+
+            decodeFile();
+
+            for (Map.Entry<String, String> entry : charCodes.entrySet()) {
+                if(entry.getKey().equals("\n")){
+                    System.out.println("Character: new line" + ", code: " + entry.getValue());
+                }else{
+                    System.out.println("Character: " + entry.getKey() + ", code: " + entry.getValue());
+                }
+                
+            }
         }
-        catch(IOException e){
-            e.printStackTrace();
-        }
+
+        
+
     }
 
     private void encodeFile(){
@@ -61,13 +79,7 @@ public class huffman {
         charCodes = codeCharecters(root,charCodes, "" );
 
 
-        try(FileOutputStream fileOutputStream = new FileOutputStream(outputPath); ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)){
-            objectOutputStream.writeObject(charCodes);
-            encodeText(objectOutputStream);
-        }
-        catch(IOException e){
-            e.printStackTrace();
-        }
+        encodeText();
         
     }
 
@@ -83,6 +95,9 @@ public class huffman {
                     charCountMap.put(charAsString, charCountMap.getOrDefault(charAsString, 0) + 1);
                 }
                 line = bufferedReader.readLine();
+                if(line != null){
+                    charCountMap.put("\n", charCountMap.getOrDefault("\n", 0) + 1);
+                }
             }
         }
         catch(IOException e){
@@ -130,30 +145,48 @@ public class huffman {
         return codes;
     }
 
-    private void encodeText(ObjectOutputStream objectOutputStream){
-        try(BufferedReader bufferedReader = new BufferedReader(new FileReader(path)); BufferedWriter writer = new BufferedWriter(new FileWriter("huffmanText.txt"))){
-            String line;
-            while((line = bufferedReader.readLine()) != null){
-                BitSet bitSet = new BitSet(line.length());
-                int bitIndex = 0;
-                for(int i = 0; i < line.length(); i++) {
-                    String charAsString = String.valueOf(line.charAt(i));
-                    String code = charCodes.get(charAsString);
-                    for(char bit : code.toCharArray()) {
-                        if (bit == '1') {
-                            bitSet.set(bitIndex); 
-                        }
-                        bitIndex++;
-                    }
+    private void encodeText(){
+        try(BufferedReader bufferedReader = new BufferedReader(new FileReader(path)); 
+        FileOutputStream fileOutputStream = new FileOutputStream(outputPath)){
+
+            writeHeaders(fileOutputStream);
+
+            BitOutputStream bits = new BitOutputStream(fileOutputStream);
+            String line = bufferedReader.readLine();
+            while (line != null) {
+                for (int i = 0; i < line.length(); i++) {
+                    String ch = String.valueOf(line.charAt(i));
+                    String code = charCodes.get(ch);
+                    bits.writeMultipleBits(code);
                 }
-                for(int i = 0; i < bitIndex; i++){
-                    writer.write(bitSet.get(i) ? '1' : '0');
+                line = bufferedReader.readLine();
+                if(line != null){
+                    String code = charCodes.get("\n");
+                    bits.writeMultipleBits(code);
                 }
-                writer.write("\n");
-                objectOutputStream.writeObject(bitSet);
-                objectOutputStream.writeInt(bitIndex);
             }
-            objectOutputStream.writeObject(null);
+            bits.close();
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+        
+    }
+    
+    private void writeHeaders(OutputStream outputStream){
+        DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
+        try{
+            dataOutputStream.writeInt(charCodes.size());
+            for(Map.Entry<String, String> entry : charCodes.entrySet()){
+                String charecter = entry.getKey();
+                String code = entry.getValue();
+                dataOutputStream.writeChar(charecter.charAt(0));
+
+                dataOutputStream.writeInt(code.length());
+
+                dataOutputStream.writeUTF(code);
+            }
+            dataOutputStream.flush();
         }
         catch(IOException e){
             e.printStackTrace();
@@ -161,53 +194,53 @@ public class huffman {
         
     }
 
-    private void decodeFile(ObjectInputStream objectInputStream){
-        try{
-            Map<String , String> decodingChars = new HashMap<>();
-            decodingChars = (Map<String, String> )objectInputStream.readObject();
-            Map<String , String> invertedHashMap = new HashMap<>();
-            for (Map.Entry<String, String> entry : decodingChars.entrySet()) {
-                invertedHashMap.put(entry.getValue(), entry.getKey());
-            }
-            try(BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))){
-                while(true){
-                    BitSet bitSet = (BitSet) objectInputStream.readObject();
-                    if (bitSet == null){
-                        break;
-                    }  
+    
 
-                    int bitLength = objectInputStream.readInt();
-                    StringBuilder binaryString = new StringBuilder();
-                    for (int i = 0; i < bitLength; i++) {
-                        binaryString.append(bitSet.get(i) ? "1" : "0");
-                    }
-        
-                    
-                    StringBuilder decodedLine = new StringBuilder();
-                    StringBuilder currentCode = new StringBuilder();
-        
-                    for (char bit : binaryString.toString().toCharArray()) {
-                        currentCode.append(bit);
-        
-                        
-                        if (invertedHashMap.containsKey(currentCode.toString())) {
-                            decodedLine.append(invertedHashMap.get(currentCode.toString()));
-                            currentCode.setLength(0);
-                        }
-                    }
-                
-                
-                    writer.write(decodedLine.toString());
-                    writer.write('\n');
+    private void decodeFile(){
+        try(FileInputStream fileInputStream = new FileInputStream(path)){
+            
+            charCodes = new HashMap<>();
+
+            DataInputStream dataInputStream = new DataInputStream(fileInputStream);
+
+            int numEntry = dataInputStream.readInt();
+            for(int i = 0;i < numEntry; i++){
+                char character = dataInputStream.readChar();
+                int codeLen = dataInputStream.readInt();
+                String code = dataInputStream.readUTF();
+                charCodes.put(String.valueOf(character), code);
+            }
+
+            
+            
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath));
+            
+            Map<String, String> invertedHasMap = new HashMap<>();
+            for (Map.Entry<String, String> entry : charCodes.entrySet()) {
+                invertedHasMap.put(entry.getValue(), entry.getKey());
+            }
+
+            BitInputStream bits = new BitInputStream(dataInputStream);
+            
+            StringBuilder currentCode = new StringBuilder();
+            int bit;
+            while((bit = bits.readBit()) != -1){
+                currentCode.append(bit);
+
+                if(invertedHasMap.containsKey(currentCode.toString())){
+                    String character = invertedHasMap.get(currentCode.toString());
+
+                    writer.write(character);
+
+                    currentCode.setLength(0);
                 }
             }
-            catch(IOException e){
-                e.printStackTrace();
-            }
-
+            bits.close();
+            writer.close();
         }
-        catch (IOException | ClassNotFoundException e) {
+        catch(IOException e){
             e.printStackTrace();
         }
     }
+
 }

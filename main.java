@@ -1,10 +1,12 @@
-// import java.io.BufferedReader;
-// import java.io.FileReader;
-// import java.io.IOException;
+import java.io.*;
+import java.util.BitSet;
+import java.util.Map;
 
 public class main {
     public static void main(String[] args){
-        huffman code = new huffman("i was here before and i will be here foreveer no matter what");
+        String textFilePath = "text.txt";
+        String encodedFilePath = "encoded.bin";
         
+        huffman code = new huffman(encodedFilePath );
     }
 }

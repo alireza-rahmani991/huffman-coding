@@ -6,19 +6,16 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.BitSet;
 import java.io.FileOutputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.ObjectInputStream;
 
 public class huffman {
-    public Node root;
+    
     String path;
     String outputPath;
+    HuffmanTree tree;
     public Map<String, Integer> charCountMap;
     public Map<String, String> charCodes;
 
@@ -32,24 +29,7 @@ public class huffman {
 
         if(fileFormatInput.equals("txt") && fileFormatOutput.equals("hff")){
             encodeFile();
-            for (Map.Entry<String, Integer> entry : charCountMap.entrySet()) {
-                if(entry.getKey() == "\n"){
-                    System.out.println("Character: new line" + ", occurence: " + entry.getValue());
-                }
-                else{
-                    System.out.println("Character: " + entry.getKey() + ", occurence: " + entry.getValue());
-                }
-                
-            }
-            System.out.println();
-            for (Map.Entry<String, String> entry : charCodes.entrySet()) {
-                if(entry.getKey().equals("\n")){
-                    System.out.println("Character: new line" + ", code: " + entry.getValue());
-                }else{
-                    System.out.println("Character: " + entry.getKey() + ", code: " + entry.getValue());
-                }
-                
-            }
+        
         }
 
 
@@ -57,14 +37,6 @@ public class huffman {
 
             decodeFile();
 
-            for (Map.Entry<String, String> entry : charCodes.entrySet()) {
-                if(entry.getKey().equals("\n")){
-                    System.out.println("Character: new line" + ", code: " + entry.getValue());
-                }else{
-                    System.out.println("Character: " + entry.getKey() + ", code: " + entry.getValue());
-                }
-                
-            }
         }
 
         
@@ -74,9 +46,9 @@ public class huffman {
     private void encodeFile(){
         countCharecters();
         
-        root = createTree(charCountMap);
+        tree = new HuffmanTree(charCountMap);
         
-        charCodes = codeCharecters(root,charCodes, "" );
+        charCodes = codeCharecters(tree.getRoot(),charCodes, "" );
 
 
         encodeText();
@@ -108,32 +80,6 @@ public class huffman {
     }
 
 
-    private Node createTree(Map<String, Integer> counts){
-        priorityQueue queue = new priorityQueue();
-        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-            queue.enqueue(new Node(entry.getValue(), entry.getKey()));
-        }
-        
-
-        while(queue.getSize() > 1){
-            Node node1 = queue.dequeue();
-            Node node2 = queue.dequeue();
-
-            Node res = new Node(node1.getCount() + node2.getCount(), node1.getCharecter() + node2.getCharecter());
-            if(node1.getCount() > node2.getCount()){
-                res.setLeft(node2);
-                res.setRight(node1);
-            }
-            else{
-                res.setLeft(node1);
-                res.setRight(node2);
-            }
-            queue.enqueue(res);
-        }
-        Node rootNode = queue.dequeue();
-        return rootNode;
-    }
-
     private Map<String, String> codeCharecters(Node root, Map<String, String> codes, String code){
         if(root.getRight() == null && root.getLeft() == null){
             codes.put(root.getCharecter(), code);
@@ -153,11 +99,13 @@ public class huffman {
 
             BitOutputStream bits = new BitOutputStream(fileOutputStream);
             String line = bufferedReader.readLine();
+
             while (line != null) {
                 for (int i = 0; i < line.length(); i++) {
                     String ch = String.valueOf(line.charAt(i));
                     String code = charCodes.get(ch);
                     bits.writeMultipleBits(code);
+                    
                 }
                 line = bufferedReader.readLine();
                 if(line != null){
@@ -165,7 +113,9 @@ public class huffman {
                     bits.writeMultipleBits(code);
                 }
             }
+            
             bits.close();
+            
         }
         catch(IOException e){
             e.printStackTrace();

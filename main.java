@@ -1,4 +1,4 @@
-import java.io.*;
+
 
 public class main {
     public static void main(String[] args){
@@ -6,8 +6,8 @@ public class main {
         String encodedFilePath = "inputAndOutputs/encoded.hff";
         String decodedFilePath = "inputAndOutputs/decoded.txt";
         
-        // huffman code = new huffman(textFilePath, encodedFilePath );
-        huffman code = new huffman(encodedFilePath, decodedFilePath );
+        // huffman encode = new huffman(textFilePath, encodedFilePath );
+        huffman decode = new huffman(encodedFilePath, decodedFilePath );
 
 
     }
